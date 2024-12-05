@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Account Switcher",
+  "version": "1.6",
+  "description": "A customizable GitHub account switcher for personal and organization-specific accounts.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["https://github.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content_script.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

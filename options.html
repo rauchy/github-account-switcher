@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Account Switcher Options</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 20px;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    ul {
+      margin-bottom: 20px;
+    }
+    ul li {
+      margin-bottom: 10px;
+    }
+    form {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>GitHub Account Switcher</h1>
+  <p>
+    This extension automatically switches your GitHub account based on the repository or organization you are visiting.
+  </p>
+  <p>
+  If you navigate to any repo under the <i>"Organization URL"</i>, it will switch to the <i>"Organization-Specific Account"</i> account.
+  If you navigate to any other repo, it will switch to the <i>Personal</i> account.
+  </p>
+  <form id="settings-form">
+    <label for="org-url">Organization URL (e.g., https://github.com/my-org):</label>
+    <input type="text" id="org-url" placeholder="Enter your organization URL" required />
+
+    <label for="org-specific-account">Organization-Specific Account:</label>
+    <input type="text" id="org-specific-account" placeholder="Enter your organization-specific GitHub username" required />
+
+    <label for="personal-account">Personal Account:</label>
+    <input type="text" id="personal-account" placeholder="Enter your personal GitHub username" required />
+
+    <label for="switch-timer">Account Switch Timer (seconds):</label>
+    <input type="number" id="switch-timer" placeholder="Enter switch timer (default: 3)" min="1" />
+
+    <button type="submit">Save Settings</button>
+  </form>
+  <p id="status"></p>
+  <script src="options.js"></script>
+</body>
+</html>

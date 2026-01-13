@@ -30,7 +30,7 @@ function handleAccountSwitch(targetAccount, switchTimer) {
   if (window.__githubAccountSwitcherActive) return;
   window.__githubAccountSwitcherActive = true;
 
-  const waitForElement = (selector, timeout = 3000) =>
+  const waitForElement = (selector, timeout = 1000) =>
     new Promise((resolve, reject) => {
       const element = document.querySelector(selector);
       if (element) {
@@ -50,6 +50,49 @@ function handleAccountSwitch(targetAccount, switchTimer) {
         reject(new Error(`Timeout: Element not found - ${selector}`));
       }, timeout);
     });
+
+  const waitForElementWithFallbacks = async (selectors, timeout = 500) => {
+    // Try all selectors in parallel for speed
+    const promises = selectors.map(selector =>
+      waitForElement(selector, timeout).catch(() => null)
+    );
+
+    const results = await Promise.all(promises);
+    const foundElement = results.find(el => el !== null);
+
+    if (foundElement) {
+      return foundElement;
+    }
+
+    throw new Error(`None of the selectors found: ${selectors.join(', ')}`);
+  };
+
+  const showErrorToast = (message) => {
+    if (document.getElementById('github-account-switcher-error-toast')) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'github-account-switcher-error-toast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 77, 77, 0.95);
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 5px;
+      font-size: 14px;
+      z-index: 10000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      max-width: 400px;
+    `;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 5000);
+  };
 
   const showInteractiveToast = (message, countdown, onConfirm, onCancel, onNeverForThisTab) => {
     if (document.getElementById('github-account-switcher-toast')) return;
@@ -206,13 +249,33 @@ function handleAccountSwitch(targetAccount, switchTimer) {
         switchTimer,
         async () => {
           try {
-            const profileButton = await waitForElement('button[aria-label="Open user navigation menu"]');
+            // Try multiple selectors for the profile button in case GitHub updates their UI
+            const profileButton = await waitForElementWithFallbacks([
+              'img[data-component="Avatar"]',
+              'img[data-testid="github-avatar"]',
+              'button[aria-label="Open user navigation menu"]',
+              'button[aria-label="Open user menu"]',
+              'summary[aria-label*="user menu"]'
+            ]);
             profileButton.click();
 
-            const accountSwitcher = await waitForElement('svg.octicon.octicon-arrow-switch');
-            accountSwitcher.closest('button').click();
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-            const accountList = await waitForElement('ul[aria-label="Switch account"]');
+            const accountSwitcher = await waitForElementWithFallbacks([
+              'svg.octicon-arrow-switch',
+              'svg.octicon.octicon-arrow-switch',
+              'button[aria-label*="witch account"]'
+            ]);
+            const switcherButton = accountSwitcher.closest('button') || accountSwitcher.parentElement;
+            switcherButton.click();
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const accountList = await waitForElementWithFallbacks([
+              'ul[aria-label="Switch account"]',
+              'ul[role="menu"]',
+              '[data-target*="account"]'
+            ]);
             const accountItems = [...accountList.querySelectorAll('li')];
 
             for (const item of accountItems) {
@@ -224,8 +287,10 @@ function handleAccountSwitch(targetAccount, switchTimer) {
                 }
               }
             }
+            throw new Error(`Account "${targetAccount}" not found in account list`);
           } catch (error) {
             console.error(`Error during account switch: ${error.message}`);
+            showErrorToast(`Failed to switch accounts: ${error.message}. Try reloading the page.`);
             window.__githubAccountSwitcherActive = false;
           }
         },

@@ -223,6 +223,7 @@ function handleAccountSwitch(targetAccount, switchTimer) {
       switchNowButton.removeEventListener('click', handleSwitchNow);
       cancelButton.removeEventListener('click', handleCancel);
       neverButton.removeEventListener('click', handleNeverForThisTab);
+      document.removeEventListener('keydown', handleEscKey);
       toast.remove();
       style.remove();
       window.__githubAccountSwitcherActive = false;
@@ -244,9 +245,16 @@ function handleAccountSwitch(targetAccount, switchTimer) {
       });
     };
 
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+
     switchNowButton.addEventListener('click', handleSwitchNow);
     cancelButton.addEventListener('click', handleCancel);
     neverButton.addEventListener('click', handleNeverForThisTab);
+    document.addEventListener('keydown', handleEscKey);
 
     timer = setInterval(() => {
       if (isCleared) return;

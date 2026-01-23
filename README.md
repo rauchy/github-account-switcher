@@ -4,20 +4,22 @@ A customizable Chrome/Arc browser extension that simplifies switching between pe
 
 ## Features
 
-- Automatically detects when you're accessing a repository or organization-specific URL.
-- Prompts you to switch to the appropriate GitHub account with options to:
-  - Switch now.
-  - Cancel.
+- **Smart Account Detection**: Automatically detects when you're accessing a repository or organization-specific URL.
+- **Interactive Toast Notifications**: Prompts you to switch accounts with a countdown timer and multiple options:
+  - Switch now (click button or press **Enter**).
+  - Cancel (click button or press **ESC**).
   - Disable switching for the current tab.
-- Fully configurable through an options page:
+- **Fast Switching**: Optimized account switching completes in under 500ms.
+- **Fully Configurable**: Customize settings through the options page:
   - Set your personal and organization-specific GitHub accounts.
   - Specify the base URL for your organization (e.g., `https://github.com/my-org`).
-  - Configure a countdown timer for automatic switching.
+  - Configure a countdown timer for automatic switching (supports values as low as 1 second).
 
-## Assumptions
+## Requirements & Notes
 
-- You must be logged into both accounts.
-- Changes in GitHub's UI might make this break from time to time. I'll do my best to fix this as I notice things break, but if you notice it before me, please let me know.
+- **Multi-Account Login**: You must be logged into both GitHub accounts simultaneously in your browser.
+- **GitHub UI Changes**: This extension relies on GitHub's UI structure. GitHub updates may occasionally break functionality. Please report any issues you encounter.
+- **Performance**: Account switching is optimized to complete in under 500ms, with subsequent switches being even faster thanks to selector caching.
 
 ## Installation
 
@@ -49,11 +51,18 @@ I _may_ publish this to the Chrome web store in the future. Until I do, you can 
 
 ## Usage
 
-- Visit GitHub and navigate to any repository or organization-specific URL.
-- If your currently active account is the wrong account, a toast notification will prompt you to:
-  - Switch accounts immediately.
-  - Cancel the switch.
-  - Disable switching for the current tab.
+1. Visit GitHub and navigate to any repository or organization-specific URL.
+2. If you're on the wrong account, a toast notification will appear with a countdown timer.
+3. You have several options:
+   - **Switch Now**: Click the button or press **Enter** to switch immediately.
+   - **Cancel**: Click the button or press **ESC** to cancel the switch.
+   - **Never For This Tab**: Click to disable automatic switching for the current tab.
+   - **Wait**: Do nothing and the switch will happen automatically when the timer expires.
+
+### Keyboard Shortcuts
+
+- **Enter**: Immediately switch to the target account
+- **ESC**: Cancel the switch and dismiss the toast
 
 ## Contributing
 

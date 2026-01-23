@@ -30,6 +30,10 @@ function handleAccountSwitch(targetAccount, switchTimer) {
   if (window.__githubAccountSwitcherActive) return;
   window.__githubAccountSwitcherActive = true;
 
+  // Cache for successful selectors to speed up subsequent switches
+  const selectorCache = window.__selectorCache || {};
+  window.__selectorCache = selectorCache;
+
   const waitForElement = (selector, timeout = 1000) =>
     new Promise((resolve, reject) => {
       const element = document.querySelector(selector);
@@ -37,31 +41,53 @@ function handleAccountSwitch(targetAccount, switchTimer) {
         resolve(element);
         return;
       }
-      const observer = new MutationObserver((mutations, obs) => {
+
+      const startTime = Date.now();
+      const checkInterval = 10; // Check every 10ms for faster detection
+
+      const checkElement = () => {
         const el = document.querySelector(selector);
         if (el) {
-          obs.disconnect();
           resolve(el);
+          return;
         }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-      setTimeout(() => {
-        observer.disconnect();
-        reject(new Error(`Timeout: Element not found - ${selector}`));
-      }, timeout);
+
+        if (Date.now() - startTime > timeout) {
+          reject(new Error(`Timeout: Element not found - ${selector}`));
+          return;
+        }
+
+        requestAnimationFrame(checkElement);
+      };
+
+      checkElement();
     });
 
-  const waitForElementWithFallbacks = async (selectors, timeout = 500) => {
+  const waitForElementWithFallbacks = async (selectors, timeout = 150, cacheKey = null) => {
+    // Try cached selector first if available
+    if (cacheKey && selectorCache[cacheKey]) {
+      try {
+        const cachedElement = await waitForElement(selectorCache[cacheKey], timeout);
+        if (cachedElement) return cachedElement;
+      } catch (e) {
+        // Cache miss, continue to try all selectors
+      }
+    }
+
     // Try all selectors in parallel for speed
-    const promises = selectors.map(selector =>
-      waitForElement(selector, timeout).catch(() => null)
+    const promises = selectors.map((selector, index) =>
+      waitForElement(selector, timeout).then(el => ({ el, index, selector })).catch(() => null)
     );
 
     const results = await Promise.all(promises);
-    const foundElement = results.find(el => el !== null);
+    const found = results.find(result => result !== null);
 
-    if (foundElement) {
-      return foundElement;
+    if (found) {
+      // Update cache with successful selector
+      if (cacheKey) {
+        selectorCache[cacheKey] = found.selector;
+      }
+      return found.el;
     }
 
     throw new Error(`None of the selectors found: ${selectors.join(', ')}`);
@@ -256,26 +282,24 @@ function handleAccountSwitch(targetAccount, switchTimer) {
               'button[aria-label="Open user navigation menu"]',
               'button[aria-label="Open user menu"]',
               'summary[aria-label*="user menu"]'
-            ]);
+            ], 150, 'profileButton');
             profileButton.click();
 
-            await new Promise(resolve => setTimeout(resolve, 300));
-
+            // Wait for the dropdown menu to appear (much faster than fixed delay)
             const accountSwitcher = await waitForElementWithFallbacks([
               'svg.octicon-arrow-switch',
               'svg.octicon.octicon-arrow-switch',
               'button[aria-label*="witch account"]'
-            ]);
+            ], 150, 'accountSwitcher');
             const switcherButton = accountSwitcher.closest('button') || accountSwitcher.parentElement;
             switcherButton.click();
 
-            await new Promise(resolve => setTimeout(resolve, 300));
-
+            // Wait for the account list modal to appear (much faster than fixed delay)
             const accountList = await waitForElementWithFallbacks([
               'ul[aria-label="Switch account"]',
               'ul[role="menu"]',
               '[data-target*="account"]'
-            ]);
+            ], 150, 'accountList');
             const accountItems = [...accountList.querySelectorAll('li')];
 
             for (const item of accountItems) {

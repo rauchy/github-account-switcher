@@ -72,8 +72,13 @@ async function handleAccountCheck(url, tabId, sendResponse) {
     return;
   }
 
-  // Skip switching on GitHub management pages that handle their own auth flows.
+  // Skip switching on GitHub pages that handle their own auth flows or
+  // act as intermediaries (e.g. GitHub Pages auth redirects go through /login).
   const skipPatterns = [
+    'https://github.com/login',
+    'https://github.com/logout',
+    'https://github.com/sessions',
+    'https://github.com/pages/auth',
     'https://github.com/orgs/',
     'https://github.com/enterprises/',
   ];

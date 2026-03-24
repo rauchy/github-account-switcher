@@ -1,30 +1,68 @@
 (async () => {
   if (window.top !== window.self) return;
+  if (!window.location.href.startsWith('https://github.com')) return;
 
-  const isNeverForThisTab = await new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: "getNeverForThisTab" }, (response) => {
-      resolve(response.isNeverForThisTab);
-    });
-  });
+  // Inject a hidden overlay immediately so we can make it visible before any
+  // wrong-account content renders, if we end up needing a cookie swap.
+  const overlay = injectOverlay();
 
-  if (isNeverForThisTab) return;
+  const { isNeverForThisTab } = await sendMessage({ type: 'getNeverForThisTab' });
+  if (isNeverForThisTab) {
+    overlay.remove();
+    return;
+  }
 
-  const url = window.location.href;
+  const response = await sendMessage({ type: 'checkAccount', url: window.location.href });
 
-  if (!url.startsWith("https://github.com")) return;
+  if (response.action === 'correct') {
+    overlay.remove();
+    return;
+  }
 
-  const data = await new Promise((resolve) => {
-    chrome.storage.sync.get(['orgSpecificAccount', 'personalAccount', 'orgUrl', 'switchTimer'], resolve);
-  });
+  if (response.action === 'swapped') {
+    // Background swapped cookies and is reloading this tab.
+    // Make the overlay visible so the user never sees the wrong-account page.
+    overlay.style.display = 'block';
+    return;
+  }
 
-  const isOrgSpecific = url.startsWith(data.orgUrl);
-  const targetAccount = isOrgSpecific ? data.orgSpecificAccount : data.personalAccount;
-  const switchTimer = data.switchTimer || 3;
-
-  if (!targetAccount) return;
-
-  handleAccountSwitch(targetAccount, switchTimer);
+  if (response.action === 'fallback') {
+    // No stored cookies yet - use the UI click approach as a fallback.
+    // This also lets us capture cookies after the switch completes (via background's
+    // webNavigation.onCompleted listener), so next time will be instant.
+    overlay.remove();
+    await waitForDom();
+    handleAccountSwitch(response.targetAccount, response.switchTimer);
+  }
 })();
+
+function sendMessage(msg) {
+  return new Promise(resolve => chrome.runtime.sendMessage(msg, resolve));
+}
+
+function injectOverlay() {
+  const overlay = document.createElement('div');
+  overlay.id = 'github-account-switcher-overlay';
+  overlay.style.cssText = [
+    'position:fixed!important',
+    'top:0!important',
+    'left:0!important',
+    'width:100%!important',
+    'height:100%!important',
+    'background:#ffffff!important',
+    'z-index:2147483647!important',
+    'display:none!important',
+  ].join(';');
+  document.documentElement.appendChild(overlay);
+  return overlay;
+}
+
+function waitForDom() {
+  return new Promise(resolve => {
+    if (document.readyState !== 'loading') resolve();
+    else document.addEventListener('DOMContentLoaded', resolve, { once: true });
+  });
+}
 
 function handleAccountSwitch(targetAccount, switchTimer) {
   if (window.__githubAccountSwitcherActive) return;
@@ -43,7 +81,6 @@ function handleAccountSwitch(targetAccount, switchTimer) {
       }
 
       const startTime = Date.now();
-      const checkInterval = 10; // Check every 10ms for faster detection
 
       const checkElement = () => {
         const el = document.querySelector(selector);
@@ -64,17 +101,15 @@ function handleAccountSwitch(targetAccount, switchTimer) {
     });
 
   const waitForElementWithFallbacks = async (selectors, timeout = 150, cacheKey = null) => {
-    // Try cached selector first if available
     if (cacheKey && selectorCache[cacheKey]) {
       try {
         const cachedElement = await waitForElement(selectorCache[cacheKey], timeout);
         if (cachedElement) return cachedElement;
       } catch (e) {
-        // Cache miss, continue to try all selectors
+        // Cache miss, fall through
       }
     }
 
-    // Try all selectors in parallel for speed
     const promises = selectors.map((selector, index) =>
       waitForElement(selector, timeout).then(el => ({ el, index, selector })).catch(() => null)
     );
@@ -83,10 +118,7 @@ function handleAccountSwitch(targetAccount, switchTimer) {
     const found = results.find(result => result !== null);
 
     if (found) {
-      // Update cache with successful selector
-      if (cacheKey) {
-        selectorCache[cacheKey] = found.selector;
-      }
+      if (cacheKey) selectorCache[cacheKey] = found.selector;
       return found.el;
     }
 
@@ -229,28 +261,14 @@ function handleAccountSwitch(targetAccount, switchTimer) {
       window.__githubAccountSwitcherActive = false;
     };
 
-    const handleSwitchNow = () => {
-      clearAll();
-      onConfirm();
-    };
-
-    const handleCancel = () => {
-      clearAll();
-      onCancel();
-    };
-
+    const handleSwitchNow = () => { clearAll(); onConfirm(); };
+    const handleCancel = () => { clearAll(); onCancel(); };
     const handleNeverForThisTab = () => {
-      chrome.runtime.sendMessage({ type: "setNeverForThisTab" }, () => {
-        clearAll();
-      });
+      chrome.runtime.sendMessage({ type: 'setNeverForThisTab' }, () => { clearAll(); });
     };
-
     const handleKeyPress = (e) => {
-      if (e.key === 'Escape') {
-        handleCancel();
-      } else if (e.key === 'Enter') {
-        handleSwitchNow();
-      }
+      if (e.key === 'Escape') handleCancel();
+      else if (e.key === 'Enter') handleSwitchNow();
     };
 
     switchNowButton.addEventListener('click', handleSwitchNow);
@@ -273,7 +291,7 @@ function handleAccountSwitch(targetAccount, switchTimer) {
   (async () => {
     try {
       const metaTag = document.querySelector('meta[name="user-login"]');
-      const currentUser = metaTag ? metaTag.getAttribute("content") : null;
+      const currentUser = metaTag ? metaTag.getAttribute('content') : null;
 
       if (currentUser === targetAccount) {
         window.__githubAccountSwitcherActive = false;
@@ -285,7 +303,6 @@ function handleAccountSwitch(targetAccount, switchTimer) {
         switchTimer,
         async () => {
           try {
-            // Try multiple selectors for the profile button in case GitHub updates their UI
             const profileButton = await waitForElementWithFallbacks([
               'img[data-component="Avatar"]',
               'img[data-testid="github-avatar"]',
@@ -295,7 +312,6 @@ function handleAccountSwitch(targetAccount, switchTimer) {
             ], 150, 'profileButton');
             profileButton.click();
 
-            // Wait for the dropdown menu to appear (much faster than fixed delay)
             const accountSwitcher = await waitForElementWithFallbacks([
               'svg.octicon-arrow-switch',
               'svg.octicon.octicon-arrow-switch',
@@ -304,7 +320,6 @@ function handleAccountSwitch(targetAccount, switchTimer) {
             const switcherButton = accountSwitcher.closest('button') || accountSwitcher.parentElement;
             switcherButton.click();
 
-            // Wait for the account list modal to appear (much faster than fixed delay)
             const accountList = await waitForElementWithFallbacks([
               'ul[aria-label="Switch account"]',
               'ul[role="menu"]',
@@ -330,7 +345,7 @@ function handleAccountSwitch(targetAccount, switchTimer) {
         },
         () => {},
         () => {
-          chrome.runtime.sendMessage({ type: "setNeverForThisTab" }, () => {});
+          chrome.runtime.sendMessage({ type: 'setNeverForThisTab' }, () => {});
         }
       );
     } catch (error) {

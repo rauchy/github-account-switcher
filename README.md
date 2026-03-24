@@ -4,22 +4,19 @@ A customizable Chrome/Arc browser extension that simplifies switching between pe
 
 ## Features
 
-- **Smart Account Detection**: Automatically detects when you're accessing a repository or organization-specific URL.
-- **Interactive Toast Notifications**: Prompts you to switch accounts with a countdown timer and multiple options:
-  - Switch now (click button or press **Enter**).
-  - Cancel (click button or press **ESC**).
-  - Disable switching for the current tab.
-- **Fast Switching**: Optimized account switching completes in under 500ms.
+- **Instant Switching**: Switches accounts silently by swapping browser session cookies — no visible menus, no page transitions, no toast. You just always end up on the right account.
+- **Smart Fallback**: On the very first switch (before a session has been learned) or if your session expires, the extension falls back to clicking through GitHub's account switcher UI automatically, then saves the session for next time.
+- **Smart Account Detection**: Automatically detects when you're accessing a repository or organization-specific URL and switches to the appropriate account.
 - **Fully Configurable**: Customize settings through the options page:
   - Set your personal and organization-specific GitHub accounts.
   - Specify the base URL for your organization (e.g., `https://github.com/my-org`).
-  - Configure a countdown timer for automatic switching (supports values as low as 1 second).
+  - Configure a countdown timer for the fallback UI switch (supports values as low as 1 second).
+  - Optionally disable instant switching if you prefer to always see the switch happen through GitHub's UI.
 
 ## Requirements & Notes
 
 - **Multi-Account Login**: You must be logged into both GitHub accounts simultaneously in your browser.
-- **GitHub UI Changes**: This extension relies on GitHub's UI structure. GitHub updates may occasionally break functionality. Please report any issues you encounter.
-- **Performance**: Account switching is optimized to complete in under 500ms, with subsequent switches being even faster thanks to selector caching.
+- **GitHub UI Changes**: The fallback UI click path relies on GitHub's UI structure. GitHub updates may occasionally break it. Please report any issues you encounter.
 
 ## Installation
 
@@ -47,19 +44,24 @@ I _may_ publish this to the Chrome web store in the future. Until I do, you can 
    - **Personal Account**: Your personal GitHub username.
    - **Organization-Specific Account**: Your organization-specific GitHub username.
    - **Organization URL**: The base URL for your organization (e.g., `https://github.com/my-org`).
-   - **Switch Timer**: The time (in seconds) before automatically switching accounts.
+   - **Switch Timer**: The time (in seconds) before automatically switching accounts (used in fallback mode).
 
 ## Usage
 
-1. Visit GitHub and navigate to any repository or organization-specific URL.
-2. If you're on the wrong account, a toast notification will appear with a countdown timer.
-3. You have several options:
-   - **Switch Now**: Click the button or press **Enter** to switch immediately.
-   - **Cancel**: Click the button or press **ESC** to cancel the switch.
-   - **Never For This Tab**: Click to disable automatic switching for the current tab.
-   - **Wait**: Do nothing and the switch will happen automatically when the timer expires.
+Navigate to any GitHub URL. The extension handles everything automatically:
+
+- **Instant switching (default)**: The account is switched silently via cookie swap before the page renders. You'll never see a wrong-account page.
+- **Fallback (first use or expired session)**: A toast notification appears with a countdown timer. You can:
+  - **Switch Now**: Click the button or press **Enter** to switch immediately.
+  - **Cancel**: Click the button or press **ESC** to cancel the switch.
+  - **Never For This Tab**: Disable automatic switching for the current tab.
+  - **Wait**: Do nothing and the switch will happen automatically when the timer expires.
+
+After any fallback switch, the extension saves your session so future switches are instant.
 
 ### Keyboard Shortcuts
+
+These apply during the fallback toast:
 
 - **Enter**: Immediately switch to the target account
 - **ESC**: Cancel the switch and dismiss the toast

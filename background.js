@@ -72,6 +72,16 @@ async function handleAccountCheck(url, tabId, sendResponse) {
     return;
   }
 
+  // Skip switching on GitHub management pages that handle their own auth flows.
+  const skipPatterns = [
+    'https://github.com/orgs/',
+    'https://github.com/enterprises/',
+  ];
+  if (skipPatterns.some(p => url.startsWith(p))) {
+    sendResponse({ action: 'correct' });
+    return;
+  }
+
   const isOrgUrl = url.startsWith(data.orgUrl);
   const targetAccount = isOrgUrl ? data.orgSpecificAccount : data.personalAccount;
 

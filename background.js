@@ -79,6 +79,7 @@ async function handleAccountCheck(url, tabId, sendResponse) {
     'https://github.com/logout',
     'https://github.com/sessions',
     'https://github.com/pages/auth',
+    'https://github.com/pulls',
     'https://github.com/orgs/',
     'https://github.com/enterprises/',
   ];

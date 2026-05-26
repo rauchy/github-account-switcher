@@ -65,6 +65,7 @@ These apply during the fallback toast:
 
 - **Enter**: Immediately switch to the target account
 - **ESC**: Cancel the switch and dismiss the toast
+- **ESC ESC** (double-tap within 500ms): Cancel and disable switching for the current tab ("Never For This Tab")
 
 ## Contributing
 

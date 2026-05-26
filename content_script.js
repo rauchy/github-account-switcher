@@ -262,9 +262,22 @@ function handleAccountSwitch(targetAccount, switchTimer) {
     };
 
     const handleSwitchNow = () => { clearAll(); onConfirm(); };
-    const handleCancel = () => { clearAll(); onCancel(); };
     const handleNeverForThisTab = () => {
       chrome.runtime.sendMessage({ type: 'setNeverForThisTab' }, () => { clearAll(); });
+    };
+    const handleCancel = () => {
+      clearAll();
+      // Keep listening for a second ESC within 500ms - if it comes, treat it as "Never For This Tab".
+      const deadline = Date.now() + 500;
+      const secondEsc = (e) => {
+        document.removeEventListener('keydown', secondEsc);
+        if (e.key === 'Escape' && Date.now() <= deadline) {
+          chrome.runtime.sendMessage({ type: 'setNeverForThisTab' }, () => {});
+        }
+      };
+      document.addEventListener('keydown', secondEsc);
+      setTimeout(() => document.removeEventListener('keydown', secondEsc), 500);
+      onCancel();
     };
     const handleKeyPress = (e) => {
       if (e.key === 'Escape') handleCancel();
